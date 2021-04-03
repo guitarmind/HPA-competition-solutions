@@ -25,7 +25,7 @@ if __name__ == '__main__':
     dataset = args.dataset
     png_dir = opj(DATA_DIR, dataset)
     # tif_dir = opj(TIF_DIR, dataset, 'tifs')
-    img_dir = opj(DATA_DIR, dataset, 'images_%d' % size)
+    img_dir = opj(DATA_DIR, 'inference', dataset, 'images_%d' % size)
     n_cpu = 3
 
     os.makedirs(img_dir, exist_ok=True)
