@@ -9,11 +9,15 @@ sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 hostname = socket.gethostname()
 print('run on %s' % hostname)
 
-RESULT_DIR     = "/data4/data/protein/result"
-DATA_DIR       = "/data5/data/protein"
-PRETRAINED_DIR = "/data5/data/pretrained"
+RESULT_DIR     = "/workspace/Kaggle/HPA/bestfitting/result"
+DATA_DIR       = "/workspace/Kaggle/HPA/hpa_2020"
+PRETRAINED_DIR = "/workspace/Kaggle/HPA/bestfitting/models"
+# RESULT_DIR     = "/data4/data/protein/result"
+# DATA_DIR       = "/data5/data/protein"
+# PRETRAINED_DIR = "/data5/data/pretrained"
 TIF_DIR        = "/data2/data/protein"
 EXTERNEL_DIR   = "/data/data/protein"
+
 
 PI  = np.pi
 INF = np.inf
@@ -21,7 +25,8 @@ EPS = 1e-12
 
 IMG_SIZE      = 512
 NUM_CLASSES   = 28
-ID            = 'Id'
+ID            = 'ID'
+# ID            = 'Id'
 PREDICTED     = 'Predicted'
 TARGET        = 'Target'
 PARENTID      = 'ParentId'

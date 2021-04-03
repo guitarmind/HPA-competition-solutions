@@ -41,6 +41,7 @@ class ProteinDataset(Dataset):
             assert self.labels.shape == (len(self.split_df), len(LABEL_NAMES))
 
         self.is_external = self.split_df[EXTERNAL].values
+        # print(ID)
         self.img_ids = self.split_df[ID].values
         self.num = len(self.img_ids)
 
