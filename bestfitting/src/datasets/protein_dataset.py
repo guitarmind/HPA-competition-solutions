@@ -52,10 +52,10 @@ class ProteinDataset(Dataset):
             self.img_dir = opj(base_dir, data_type, 'images')
             self.external_img_dir = opj(base_dir, 'train', 'external_v18_512')
         elif self.img_size<=768:
-            self.img_dir = opj(base_dir, data_type, 'images_768')
+            self.img_dir = opj(base_dir, 'inference', data_type, 'images_768')
             self.external_img_dir = opj(base_dir, 'train', 'external_v18_768')
         else:
-            self.img_dir = opj(base_dir, data_type, 'images_1536')
+            self.img_dir = opj(base_dir, 'inference', data_type, 'images_1536')
             self.external_img_dir = opj(base_dir, 'train', 'external_v18_1536')
         print(self.img_dir)
         print(self.external_img_dir)
