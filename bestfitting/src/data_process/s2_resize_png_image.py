@@ -11,7 +11,7 @@ from PIL import Image
 def do_convert(fname_img):
     img = np.array(Image.open(opj(png_dir, fname_img)), dtype=np.float32)
     img = cv2.resize(img, (size, size), interpolation=cv2.INTER_LINEAR)
-    cv2.imwrite(opj(fname_img, fname_img), img)
+    cv2.imwrite(opj(img_dir, fname_img), img)
 
 parser = argparse.ArgumentParser(description='PyTorch Protein Classification')
 parser.add_argument('--dataset', type=str, default='train', help='dataset')
