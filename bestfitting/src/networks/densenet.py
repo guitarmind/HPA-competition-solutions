@@ -84,8 +84,11 @@ class DensenetClass(nn.Module):
             self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        mean = [0.074598, 0.050630, 0.050891, 0.076287]#rgby
-        std =  [0.122813, 0.085745, 0.129882, 0.119411]
+        # mean = [0.074598, 0.050630, 0.050891, 0.076287]#rgby
+        # std =  [0.122813, 0.085745, 0.129882, 0.119411]
+        # 2021 training + public test
+        mean = [0.081018, 0.052349, 0.054012, 0.08106]  #rgby
+        std = [0.133235, 0.08948, 0.143813, 0.130265]
         for i in range(self.in_channels):
             x[:,i,:,:] = (x[:,i,:,:] - mean[i]) / std[i]
 
