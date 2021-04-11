@@ -9,6 +9,7 @@ __pycache__/
 dataset-metadata.json
 *.pth
 submission.csv
+result_comparison.csv
 
 # Distribution / packaging
 .Python
