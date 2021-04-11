@@ -16,8 +16,10 @@ def init_network(params):
     architecture = params.get('architecture', 'class_densenet121_dropout')
     num_classes = params.get('num_classes', 28)
     in_channels = params.get('in_channels', 4)
+    pretrained_path = params.get('pretrained_path', None)
 
-    pretrained_file = opj(PRETRAINED_DIR, model_names[architecture])
+    pretrained_file = opj(pretrained_path, model_names[architecture])
+    # pretrained_file = opj(PRETRAINED_DIR, model_names[architecture])
     print(">> Using pre-trained model.")
     net = eval(architecture)(num_classes=num_classes, in_channels=in_channels, pretrained_file=pretrained_file)
     return net
