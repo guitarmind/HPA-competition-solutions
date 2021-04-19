@@ -1,13 +1,12 @@
 
 kernel_mode = False
 
-# import hpacellseg.cellsegmentator as cellsegmentator
-# from hpacellseg.utils import label_cell, label_nuclei
 from tqdm import tqdm
 import os
 import numpy as np
 import pandas as pd
 import cv2
+import gc
 
 IMAGE_SIZES = [1728, 2048, 3072, 4096]
 if kernel_mode:
@@ -16,14 +15,14 @@ if kernel_mode:
     output_folder = "/kaggle/working/test_cell_masks"
     NUC_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_cell_3ch_v1.pth"
-    BATCH_SIZE = {1728: 24, 2048: 24, 3072: 24, 4096: 24}
+    BATCH_SIZE = {1728: 24, 2048: 24, 3072: 12, 4096: 12}
 else:
     dataset_folder = "/workspace/Kaggle/HPA/hpa_2020"
     img_dir = f"{dataset_folder}/test"
     output_folder = f"{dataset_folder}/test_cell_masks"
     NUC_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_cell_3ch_v1.pth"
-    BATCH_SIZE = {1728: 18, 2048: 18, 3072: 12, 4096: 12}
+    BATCH_SIZE = {1728: 18, 2048: 18, 3072: 8, 4096: 8}
 
 os.makedirs(output_folder, exist_ok=True)
 
@@ -39,7 +38,6 @@ predict_ids_2048 = predict_df_2048.ID.to_list()
 predict_ids_3072 = predict_df_3072.ID.to_list()
 predict_ids_4096 = predict_df_4096.ID.to_list()
 
-"""Package for loading and running the nuclei and cell segmentation models programmaticly."""
 import os
 import sys
 
@@ -51,21 +49,16 @@ import torch.nn
 import torch.nn.functional as F
 
 from skimage import transform, util
-
 """Shared constants for the HPA Cell Segmentation package."""
 
 NUCLEI_MODEL_URL = (
-    "https://zenodo.org/record/4665863/files/dpn_unet_nuclei_v1.pth"
-)
+    "https://zenodo.org/record/4665863/files/dpn_unet_nuclei_v1.pth")
 
 MULTI_CHANNEL_CELL_MODEL_URL = (
-    "https://zenodo.org/record/4665863/files/dpn_unet_cell_3ch_v1.pth"
-)
+    "https://zenodo.org/record/4665863/files/dpn_unet_cell_3ch_v1.pth")
 
 TWO_CHANNEL_CELL_MODEL_URL = (
-    "https://zenodo.org/record/4665863/files/dpn_unet_cell_v2.pth"
-)
-
+    "https://zenodo.org/record/4665863/files/dpn_unet_cell_v2.pth")
 """Utility functions for the HPA Cell Segmentation package."""
 import os.path
 import urllib
@@ -84,8 +77,7 @@ LOW_THRESHOLD = HIGH_THRESHOLD - 0.25
 def download_with_url(url_string, file_path, unzip=False):
     """Download file with a link."""
     with urllib.request.urlopen(url_string) as response, open(
-        file_path, "wb"
-    ) as out_file:
+            file_path, "wb") as out_file:
         data = response.read()  # a `bytes` object
         out_file.write(data)
 
@@ -137,9 +129,10 @@ def label_nuclei(nuclei_pred):
     # TODO: Figure out good value for remove small objects.
     # mask_img = remove_small_objects(mask_img, 8)
     mask_img = mask_img.astype(np.uint8)
-    nuclei_label = segmentation.watershed(
-        mask_img, markers, mask=mask_img, watershed_line=True
-    )
+    nuclei_label = segmentation.watershed(mask_img,
+                                          markers,
+                                          mask=mask_img,
+                                          watershed_line=True)
     nuclei_label = remove_small_objects(nuclei_label, 2500)
     nuclei_label = measure.label(nuclei_label)
     return nuclei_label
@@ -176,9 +169,8 @@ def label_cell(nuclei_pred, cell_pred):
         img_copy[m <= threshold + threshold_adjustment] = 0
         img_copy[m > threshold + threshold_adjustment] = 1
         img_copy = img_copy.astype(np.bool)
-        img_copy = remove_small_objects(img_copy, small_object_size_cutoff).astype(
-            np.uint8
-        )
+        img_copy = remove_small_objects(
+            img_copy, small_object_size_cutoff).astype(np.uint8)
 
         mask_img[mask_img <= threshold] = 0
         mask_img[mask_img > threshold] = 1
@@ -186,9 +178,10 @@ def label_cell(nuclei_pred, cell_pred):
         mask_img = remove_small_holes(mask_img, 1000)
         mask_img = remove_small_objects(mask_img, 8).astype(np.uint8)
         markers = ndi.label(img_copy, output=np.uint32)[0]
-        labeled_array = segmentation.watershed(
-            mask_img, markers, mask=mask_img, watershed_line=True
-        )
+        labeled_array = segmentation.watershed(mask_img,
+                                               markers,
+                                               mask=mask_img,
+                                               watershed_line=True)
         return labeled_array
 
     nuclei_label = __wsh(
@@ -206,14 +199,17 @@ def label_cell(nuclei_pred, cell_pred):
     # this is to remove the cell borders' signal from cell mask.
     # could use np.logical_and with some revision, to replace this func.
     # Tuned for segmentation hpa images
-    threshold_value = max(0.22, filters.threshold_otsu(cell_pred[..., 2] / 255) * 0.5)
+    threshold_value = max(
+        0.22,
+        filters.threshold_otsu(cell_pred[..., 2] / 255) * 0.5)
     # exclude the green area first
     cell_region = np.multiply(
         cell_pred[..., 2] / 255 > threshold_value,
         np.invert(np.asarray(cell_pred[..., 1] / 255 > 0.05, dtype=np.int8)),
     )
     sk = np.asarray(cell_region, dtype=np.int8)
-    distance = np.clip(cell_pred[..., 2], 255 * threshold_value, cell_pred[..., 2])
+    distance = np.clip(cell_pred[..., 2], 255 * threshold_value, cell_pred[...,
+                                                                           2])
     cell_label = segmentation.watershed(-distance, nuclei_label, mask=sk)
     cell_label = remove_small_objects(cell_label, 5500).astype(np.uint8)
     selem = disk(6)
@@ -225,8 +221,7 @@ def label_cell(nuclei_pred, cell_pred):
         np.add(
             np.asarray(cell_label > 0, dtype=np.int8),
             np.asarray(cell_pred[..., 1] / 255 > 0.05, dtype=np.int8),
-        )
-        > 0,
+        ) > 0,
         dtype=np.int8,
     )
     cell_label = segmentation.watershed(-distance, cell_label, mask=sk)
@@ -255,38 +250,36 @@ def label_cell2(cell_pred):
     # exclude the green area first
     cell_region = np.multiply(
         cell_pred[..., 2],
-        np.logical_and(
-            np.invert(np.asarray(cell_pred[..., 1] > 0.01)),
-            cell_pred[..., 2] > threshold_value
-        )
-    )
+        np.logical_and(np.invert(np.asarray(cell_pred[..., 1] > 0.01)),
+                       cell_pred[..., 2] > threshold_value))
     cell_region1 = np.multiply(
         img[..., 2] > threshold_value1,
         np.invert(np.asarray(cell_pred[..., 1] > 0.01)),
     )
-    cell_region_eroded = morphology.erosion(
-        cell_region1, morphology.square(25))
+    cell_region_eroded = morphology.erosion(cell_region1,
+                                            morphology.square(25))
     cell_region_eroded = np.asarray(cell_region_eroded, dtype=np.uint8)
     cell_region_eroded = ndi.label(cell_region_eroded)[0]
     remove_size_ratio = int((size / 512)**2)
-    cell_region_eroded = remove_small_objects(
-        cell_region_eroded, 10 * remove_size_ratio)
+    cell_region_eroded = remove_small_objects(cell_region_eroded,
+                                              10 * remove_size_ratio)
     cell_region_eroded = np.asarray(cell_region_eroded > 0, dtype=np.uint8)
     distance = np.clip(cell_pred[..., 2], threshold_value, cell_pred[..., 2])
-    local_maxi = feature.peak_local_max(
-        cell_region_eroded, indices=False, footprint=np.ones((1, 1)))
+    local_maxi = feature.peak_local_max(cell_region_eroded,
+                                        indices=False,
+                                        footprint=np.ones((1, 1)))
     markers = ndi.label(local_maxi)[0]
     cell_label = segmentation.watershed(-distance, markers, mask=cell_region)
-    cell_label = remove_small_objects(
-        cell_label, 1000 * remove_size_ratio).astype(np.uint8)
+    cell_label = remove_small_objects(cell_label, 1000 *
+                                      remove_size_ratio).astype(np.uint8)
     selem = disk(6)
     cell_label = closing(cell_label, selem)
     # this part is to use green channel, and extend cell label to green channel
     # benefit is to exclude cells clear on border but without nucleus
     sk = np.logical_or(
-            cell_label > 0,
-            cell_pred[..., 1] > 0.1,
-        )
+        cell_label > 0,
+        cell_pred[..., 1] > 0.1,
+    )
     sk = np.asarray(sk, dtype=np.uint8)
     cell_label = segmentation.watershed(-sk, cell_label, mask=sk)
     cell_label = __fill_holes(cell_label)
@@ -295,13 +288,15 @@ def label_cell2(cell_pred):
 
     return cell_label
 
-NORMALIZE = {"mean": [124 / 255, 117 / 255, 104 / 255],
-             "std": [1 / (0.0167 * 255)] * 3}
+
+NORMALIZE = {
+    "mean": [124 / 255, 117 / 255, 104 / 255],
+    "std": [1 / (0.0167 * 255)] * 3
+}
 
 
 class CellSegmentator(object):
     """Uses pretrained DPN-Unet models to segment cells from images."""
-
     def __init__(
         self,
         nuclei_model="./nuclei_model.pth",
@@ -361,9 +356,8 @@ class CellSegmentator(object):
                     file=sys.stderr,
                 )
                 download_with_url(NUCLEI_MODEL_URL, nuclei_model)
-            nuclei_model = torch.load(
-                nuclei_model, map_location=torch.device(self.device)
-            )
+            nuclei_model = torch.load(nuclei_model,
+                                      map_location=torch.device(self.device))
         if isinstance(nuclei_model, torch.nn.DataParallel) and device == "cpu":
             nuclei_model = nuclei_model.module
 
@@ -372,15 +366,14 @@ class CellSegmentator(object):
         self.multi_channel_model = multi_channel_model
         if isinstance(cell_model, str):
             if not os.path.exists(cell_model):
-                print(
-                    f"Could not find {cell_model}. Downloading it now", file=sys.stderr
-                )
+                print(f"Could not find {cell_model}. Downloading it now",
+                      file=sys.stderr)
                 if self.multi_channel_model:
                     download_with_url(MULTI_CHANNEL_CELL_MODEL_URL, cell_model)
                 else:
                     download_with_url(TWO_CHANNEL_CELL_MODEL_URL, cell_model)
-            cell_model = torch.load(
-                cell_model, map_location=torch.device(self.device))
+            cell_model = torch.load(cell_model,
+                                    map_location=torch.device(self.device))
         self.cell_model = cell_model.to(self.device)
         self.scale_factor = scale_factor
         self.padding = padding
@@ -430,20 +423,21 @@ class CellSegmentator(object):
 
         if not all(isinstance(item, np.ndarray) for item in microtubule_imgs):
             microtubule_imgs = [
-                os.path.expanduser(item) for _, item in enumerate(microtubule_imgs)
+                os.path.expanduser(item)
+                for _, item in enumerate(microtubule_imgs)
             ]
             nuclei_imgs = [
                 os.path.expanduser(item) for _, item in enumerate(nuclei_imgs)
             ]
 
             microtubule_imgs = list(
-                map(lambda item: imageio.imread(item), microtubule_imgs)
-            )
+                map(lambda item: imageio.imread(item), microtubule_imgs))
             nuclei_imgs = list(
                 map(lambda item: imageio.imread(item), nuclei_imgs))
             if er_imgs:
-                er_imgs = [os.path.expanduser(item)
-                           for _, item in enumerate(er_imgs)]
+                er_imgs = [
+                    os.path.expanduser(item) for _, item in enumerate(er_imgs)
+                ]
                 er_imgs = list(map(lambda item: imageio.imread(item), er_imgs))
 
         if not er_imgs:
@@ -455,8 +449,7 @@ class CellSegmentator(object):
             map(
                 lambda item: np.dstack((item[0], item[1], item[2])),
                 list(zip(microtubule_imgs, er_imgs, nuclei_imgs)),
-            )
-        )
+            ))
 
         return cell_imgs
 
@@ -472,17 +465,17 @@ class CellSegmentator(object):
         Returns:
         predictions -- A list of predictions of nuclei segmentation for each nuclei image.
         """
-
         def _preprocess(image):
             if isinstance(image, str):
                 image = imageio.imread(image)
             self.target_shape = image.shape
             if len(image.shape) == 2:
                 image = np.dstack((image, image, image))
-            image = transform.rescale(
-                image, self.scale_factor, multichannel=True)
-            nuc_image = np.dstack(
-                (image[..., 2], image[..., 2], image[..., 2]))
+            image = transform.rescale(image,
+                                      self.scale_factor,
+                                      multichannel=True)
+            nuc_image = np.dstack((image[..., 2], image[..., 2], image[...,
+                                                                       2]))
             if self.padding:
                 rows, cols = nuc_image.shape[:2]
                 self.scaled_shape = rows, cols
@@ -534,9 +527,8 @@ class CellSegmentator(object):
         """
         n_prediction = n_prediction.transpose([1, 2, 0])
         if self.padding:
-            n_prediction = n_prediction[
-                32: 32 + self.scaled_shape[0], 32: 32 + self.scaled_shape[1], ...
-            ]
+            n_prediction = n_prediction[32:32 + self.scaled_shape[0],
+                                        32:32 + self.scaled_shape[1], ...]
         n_prediction[..., 0] = 0
         if not self.scale_factor == 1:
             n_prediction = cv2.resize(
@@ -570,13 +562,13 @@ class CellSegmentator(object):
         Returns:
         predictions -- a list of predictions of cell segmentations.
         """
-
         def _preprocess(image):
             self.target_shape = image.shape
             if not len(image.shape) == 3:
                 raise ValueError("image should has 3 channels")
-            cell_image = transform.rescale(
-                image, self.scale_factor, multichannel=True)
+            cell_image = transform.rescale(image,
+                                           self.scale_factor,
+                                           multichannel=True)
             if self.padding:
                 rows, cols = cell_image.shape[:2]
                 self.scaled_shape = rows, cols
@@ -624,6 +616,7 @@ class CellSegmentator(object):
 
         return predictions
 
+
 segmentator = CellSegmentator(
     NUC_MODEL,
     CELL_MODEL,
@@ -647,7 +640,7 @@ def get_segment_mask(batch_image_paths, bs=24):
 
 for size_idx, submission_ids in tqdm(enumerate(
     [predict_ids_1728, predict_ids_2048, predict_ids_3072, predict_ids_4096]),
-                                     total=submit_df.shape[0]):
+                                     total=4):
     size = IMAGE_SIZES[size_idx]
     if submission_ids == []:
         print(f"\n...SKIPPING SIZE {size} AS THERE ARE NO IMAGE IDS ...\n")
@@ -664,7 +657,11 @@ for size_idx, submission_ids in tqdm(enumerate(
             y.append(os.path.join(img_dir, f'{img_id}_yellow.png'))
             b.append(os.path.join(img_dir, f'{img_id}_blue.png'))
         batch_image_paths = [r, y, b]
-        batch_cell_masks = get_segment_mask(batch_image_paths, bs=BATCH_SIZE[size])
+        batch_cell_masks = get_segment_mask(batch_image_paths,
+                                            bs=BATCH_SIZE[size])
+
+        torch.cuda.empty_cache()
+        gc.collect()
 
         for index, img_id in enumerate(image_ids):
             np.save(os.path.join(output_folder, f'{img_id}_cell_mask.npy'),
