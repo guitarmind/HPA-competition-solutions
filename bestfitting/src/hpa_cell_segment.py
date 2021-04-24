@@ -8,7 +8,14 @@ import pandas as pd
 import cv2
 import gc
 
+import sys
+if kernel_mode:
+    sys.path.insert(0, "../input/hpa-bestfitting-solution/src")
+    sys.path.insert(0, "../input/hpa-cell-segmentation")
+
 from hpacellseg.cellsegmentator import *
+
+target_image_size = 512
 
 IMAGE_SIZES = [1728, 2048, 3072, 4096]
 if kernel_mode:
@@ -17,7 +24,7 @@ if kernel_mode:
     output_folder = "/kaggle/working/test_cell_masks"
     NUC_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_cell_3ch_v1.pth"
-    BATCH_SIZE = {1728: 24, 2048: 24, 3072: 12, 4096: 12}
+    BATCH_SIZE = {1728: 24, 2048: 22, 3072: 12, 4096: 12}
 else:
     dataset_folder = "/workspace/Kaggle/HPA/hpa_2020"
     img_dir = f"{dataset_folder}/test"
@@ -25,7 +32,7 @@ else:
     NUC_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_cell_3ch_v1.pth"
     #     BATCH_SIZE = {1728: 24, 2048: 24, 3072: 12, 4096: 12}
-    BATCH_SIZE = {1728: 24, 2048: 18, 3072: 8, 4096: 8}
+    BATCH_SIZE = {1728: 20, 2048: 18, 3072: 8, 4096: 8}
 
 os.makedirs(output_folder, exist_ok=True)
 
@@ -491,25 +498,43 @@ def label_cell(nuclei_pred, cell_pred):
     return nuclei_label, cell_label
 
 
-segmentator = CellSegmentator(
-    NUC_MODEL,
-    CELL_MODEL,
-    scale_factor=0.25,
-    device="cuda",
-    padding=True,
-    multi_channel_model=True,
-)
+segmentator = CellSegmentator(NUC_MODEL, CELL_MODEL, padding=True)
+# segmentator = CellSegmentator(
+#     NUC_MODEL,
+#     CELL_MODEL,
+#     scale_factor=0.25,
+#     device="cuda",
+#     padding=True,
+#     multi_channel_model=True,
+# )
 
 
-def get_segment_mask(batch_image_paths, bs=24):
-    nuc_segmentations = segmentator.pred_nuclei(batch_image_paths[2],
-                                                bs=bs)  # blue
-    cell_segmentations = segmentator.pred_cells(batch_image_paths, bs=bs)
+def get_segment_mask(gray, rgb, bs=24):
+    nuc_segmentations = segmentator.pred_nuclei(gray, bs=bs)  # blue
+    cell_segmentations = segmentator.pred_cells(rgb, precombined=True, bs=bs)
     batch_cell_masks = [
         label_cell(nuc_seg, cell_seg)[1].astype(np.uint8)
         for nuc_seg, cell_seg in zip(nuc_segmentations, cell_segmentations)
     ]
     return batch_cell_masks
+
+
+def load_images(image_ids, root=img_dir):
+    gray = []
+    rgb = []
+    for ID in tqdm(image_ids, total=len(image_ids)):
+        r = os.path.join(root, f'{ID}_red.png')
+        y = os.path.join(root, f'{ID}_yellow.png')
+        b = os.path.join(root, f'{ID}_blue.png')
+        r = cv2.imread(r, 0)
+        y = cv2.imread(y, 0)
+        b = cv2.imread(b, 0)
+        gray_image = cv2.resize(b, (target_image_size, target_image_size))
+        rgb_image = cv2.resize(np.stack((r, y, b), axis=2),
+                               (target_image_size, target_image_size))
+        gray.append(gray_image)
+        rgb.append(rgb_image)
+    return gray, rgb
 
 
 for size_idx, submission_ids in tqdm(enumerate(
@@ -526,13 +551,8 @@ for size_idx, submission_ids in tqdm(enumerate(
 
         r, y, b = [], [], []
         image_ids = submission_ids[i:(i + BATCH_SIZE[size])]
-        for img_id in image_ids:
-            r.append(os.path.join(img_dir, f'{img_id}_red.png'))
-            y.append(os.path.join(img_dir, f'{img_id}_yellow.png'))
-            b.append(os.path.join(img_dir, f'{img_id}_blue.png'))
-        batch_image_paths = [r, y, b]
-        batch_cell_masks = get_segment_mask(batch_image_paths,
-                                            bs=BATCH_SIZE[size])
+        gray, rgb = load_images(image_ids)
+        batch_cell_masks = get_segment_mask(gray, rgb, bs=BATCH_SIZE[size])
 
         torch.cuda.empty_cache()
         gc.collect()
