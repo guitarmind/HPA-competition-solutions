@@ -20,14 +20,16 @@ target_image_size = 512
 IMAGE_SIZES = [1728, 2048, 3072, 4096]
 if kernel_mode:
     dataset_folder = "/kaggle/input/hpa-single-cell-image-classification"
-    img_dir = f"{dataset_folder}/test"
+    # img_dir = f"{dataset_folder}/test"
+    img_dir = "/kaggle/working/test_resized"
     output_folder = "/kaggle/working/test_cell_masks"
     NUC_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_cell_3ch_v1.pth"
     BATCH_SIZE = {1728: 24, 2048: 22, 3072: 12, 4096: 12}
 else:
     dataset_folder = "/workspace/Kaggle/HPA/hpa_2020"
-    img_dir = f"{dataset_folder}/test"
+    # img_dir = f"{dataset_folder}/test"
+    img_dir = f"{dataset_folder}/test_resized"
     output_folder = f"{dataset_folder}/test_cell_masks"
     NUC_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_cell_3ch_v1.pth"
@@ -498,7 +500,10 @@ def label_cell(nuclei_pred, cell_pred):
     return nuclei_label, cell_label
 
 
-segmentator = CellSegmentator(NUC_MODEL, CELL_MODEL, padding=True)
+segmentator = CellSegmentator(NUC_MODEL,
+                              CELL_MODEL,
+                              device="cuda",
+                              padding=True)
 # segmentator = CellSegmentator(
 #     NUC_MODEL,
 #     CELL_MODEL,
@@ -529,9 +534,11 @@ def load_images(image_ids, root=img_dir):
         r = cv2.imread(r, 0)
         y = cv2.imread(y, 0)
         b = cv2.imread(b, 0)
-        gray_image = cv2.resize(b, (target_image_size, target_image_size))
-        rgb_image = cv2.resize(np.stack((r, y, b), axis=2),
-                               (target_image_size, target_image_size))
+        #         gray_image = cv2.resize(b, (target_image_size, target_image_size))
+        #         rgb_image = cv2.resize(np.stack((r, y, b), axis=2),
+        #                                (target_image_size, target_image_size))
+        gray_image = b
+        rgb_image = np.stack((r, y, b), axis=2)
         gray.append(gray_image)
         rgb.append(rgb_image)
     return gray, rgb
