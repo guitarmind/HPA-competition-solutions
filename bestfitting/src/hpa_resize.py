@@ -12,8 +12,12 @@ from PIL import Image
 
 
 def do_convert(fname_img):
-    img = np.array(Image.open(os.path.join(source_dir, fname_img)),
-                   dtype=np.float32)
+    #     img = np.array(Image.open(os.path.join(source_dir, fname_img)),
+    #                    dtype=np.float32)
+    #     img = cv2.resize(img, (size, size), interpolation=cv2.INTER_LINEAR)
+    #     cv2.imwrite(os.path.join(dest_dir, fname_img), img)
+
+    img = cv2.imread(os.path.join(source_dir, fname_img), cv2.IMREAD_GRAYSCALE)
     img = cv2.resize(img, (size, size), interpolation=cv2.INTER_LINEAR)
     cv2.imwrite(os.path.join(dest_dir, fname_img), img)
 
@@ -31,8 +35,9 @@ if __name__ == '__main__':
     n_cpu = 2 if kernel_mode else 4
 
     os.makedirs(dest_dir, exist_ok=True)
-    start_num = max(0, len(os.listdir(dest_dir)) - n_cpu * 2)
-    fnames = np.sort(os.listdir(source_dir))[start_num:]
+    fnames = np.sort(os.listdir(source_dir))
+    #     start_num = max(0, len(os.listdir(dest_dir)) - n_cpu * 2)
+    #     fnames = np.sort(os.listdir(source_dir))[start_num:]
     pool = mlc.SuperPool(n_cpu)
     df_list = pool.map(do_convert, fnames, description='Resizing HPA images')
 
