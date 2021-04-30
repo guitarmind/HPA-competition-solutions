@@ -20,7 +20,7 @@ IMAGE_SIZES = [1728, 2048, 3072, 4096]
 if kernel_mode:
     dataset_folder = "/kaggle/input/hpa-single-cell-image-classification"
     # img_dir = f"{dataset_folder}/test"
-    img_dir = "/kaggle/working/test_resized"
+    img_dir = "/kaggle/working/test_resized/512"
     output_folder = "/kaggle/working/test_cell_masks"
     NUC_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/kaggle/input/hpa-cell-segmentation/dpn_unet_cell_3ch_v1.pth"
@@ -28,7 +28,7 @@ if kernel_mode:
 else:
     dataset_folder = "/workspace/Kaggle/HPA/hpa_2020"
     # img_dir = f"{dataset_folder}/test"
-    img_dir = f"{dataset_folder}/test_resized"
+    img_dir = f"{dataset_folder}/test_resized/512"
     output_folder = f"{dataset_folder}/test_cell_masks"
     NUC_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_nuclei_v1.pth"
     CELL_MODEL = "/workspace/Github/HPA-Cell-Segmentation/dpn_unet_cell_3ch_v1.pth"

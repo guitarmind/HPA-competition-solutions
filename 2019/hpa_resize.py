@@ -31,8 +31,9 @@ args = parser.parse_args()
 if __name__ == '__main__':
     size = args.size
     source_dir = args.source
-    dest_dir = args.dest
-    n_cpu = 2 if kernel_mode else 4
+    dest_dir = f"{args.dest}/{size}"
+    n_cpu = 4
+#     n_cpu = 2 if kernel_mode else 4
 
     os.makedirs(dest_dir, exist_ok=True)
     fnames = np.sort(os.listdir(source_dir))
