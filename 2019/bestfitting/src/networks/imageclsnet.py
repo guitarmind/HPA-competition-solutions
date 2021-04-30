@@ -1,8 +1,8 @@
-from config.config import *
-from utils.common_util import *
-from networks.densenet import class_densenet121_dropout, class_densenet121_large_dropout
-from networks.inception_v3 import class_inceptionv3_dropout
-from networks.resnet import class_resnet34_dropout, class_resnet18_dropout
+from bestfitting.src.config.config import *
+from bestfitting.src.utils.common_util import *
+from bestfitting.src.networks.densenet import class_densenet121_dropout, class_densenet121_large_dropout
+from bestfitting.src.networks.inception_v3 import class_inceptionv3_dropout
+from bestfitting.src.networks.resnet import class_resnet34_dropout, class_resnet18_dropout
 
 model_names = {
     'class_densenet121_dropout': 'densenet121-a639ec97.pth',

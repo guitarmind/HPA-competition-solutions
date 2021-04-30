@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.backbone.inception_v3 import *
+from bestfitting.src.layers.backbone.inception_v3 import *
 
 class ClassInceptionV3(nn.Module):
 

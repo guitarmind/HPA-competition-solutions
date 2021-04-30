@@ -1,9 +1,9 @@
 import math
 
 from torch import nn
-from config.config import *
-from layers.hard_example import *
-from layers.lovasz_losses import *
+from bestfitting.src.config.config import *
+from bestfitting.src.layers.hard_example import *
+from bestfitting.src.layers.lovasz_losses import *
 
 class FocalLoss(nn.Module):
     def __init__(self, gamma=2):

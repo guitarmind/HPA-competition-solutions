@@ -1,8 +1,8 @@
 from torch.nn import Parameter
 
-from layers.backbone.resnet import *
-from layers.loss import *
-from utils.common_util import *
+from bestfitting.src.layers.backbone.resnet import *
+from bestfitting.src.layers.loss import *
+from bestfitting.src.utils.common_util import *
 
 
 ## networks  ######################################################################

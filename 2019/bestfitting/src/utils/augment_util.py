@@ -2,7 +2,7 @@ import math
 import numpy as np
 import cv2
 import torch
-from config.config import *
+from bestfitting.src.config.config import *
 from imgaug import augmenters as iaa
 
 def train_multi_augment2(image):

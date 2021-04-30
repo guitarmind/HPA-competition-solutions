@@ -2,11 +2,11 @@ import os
 import numpy as np
 import cv2
 from torch.utils.data.dataset import Dataset
-from utils.common_util import *
+from bestfitting.src.utils.common_util import *
 import pandas as pd
-from config.config import *
-from datasets.tool import *
-from utils.augment_util import *
+from bestfitting.src.config.config import *
+from bestfitting.src.datasets.tool import *
+from bestfitting.src.utils.augment_util import *
 from PIL import Image
 import re
 

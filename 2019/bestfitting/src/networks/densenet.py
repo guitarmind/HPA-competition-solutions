@@ -1,7 +1,7 @@
 import re
 
-from layers.backbone.densenet import *
-from layers.loss import *
+from bestfitting.src.layers.backbone.densenet import *
+from bestfitting.src.layers.loss import *
 
 
 ## networks  ######################################################################

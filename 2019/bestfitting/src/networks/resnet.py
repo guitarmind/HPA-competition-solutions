@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.backbone.resnet import *
+from bestfitting.src.layers.backbone.resnet import *
 
 ## net  ######################################################################
 class ResnetClass(nn.Module):
